@@ -7,38 +7,44 @@ from mbp import *
 
 
 MODEL = "Qwen/Qwen2.5-Coder-0.5B-Instruct"
-MSG = build_system_message_from_yaml(this_dir("code_completion.yaml"))
 
 
-async def f(session, prompt):
+async def f(session, data, idx):
+    examples = data[:3] if idx >= 3 else data[3:6]
+    msg = build_system_message(
+        instruction="You are a coding assistant. Complete the following python function (descriptions, inputs, and ouputs are given).",
+        outputs=["completion"],
+        examples=[{"prompt": e["prompt"], "completion": e["canonical_solution"]} for e in examples])
+
     async with session.post(
         "http://localhost:8000/v1/chat/completions",
         headers={"Content-Type": "application/json"},
         json={
             "model": MODEL,
+            "max_tokens": 512,
+            "temperature": 0,
             "response_format": {"type": "json_object"},
-            "messages": build_messages(MSG, {"prompt": prompt})
-        }
+            "messages": build_messages(msg, {"prompt": data[idx]})}
     ) as resp:
         try:
             res = await resp.json()
-            return json.loads(res["choices"][0]["message"]["content"])
+            return json.loads(res["choices"][0]["message"]["content"])["completion"]
         except:
-            return "pass"
+            return ""
 
 
 async def infer():
     data = list(load_jsonl(this_dir("HumanEval.jsonl.gz"), compression="gz"))
     async with aiohttp.ClientSession() as session:
-        results = await asyncio.gather(*[f(session, d["prompt"]) for d in data])
-    save_jsonl(this_dir("output.jsonl"), [{**d, "output": r["completion"]} for d, r in zip(data, results)])
+        results = await asyncio.gather(*[f(session, data, i) for i, _ in enumerate(data)])
+    save_jsonl(this_dir("output.jsonl"), [{**d, "output": r} for d, r in zip(data, results)])
 
 
 def eval():
     num_pass = 0
     for d in load_jsonl("output.jsonl"):
-        f_str = d["prompt"] + "\n".join(["    " + l.strip() for l in d["output"].split("\n")])
         try:
+            f_str = d["prompt"] + "\n".join(["    " + l.strip() for l in d["output"].split("\n")])
             namespace = {}
             exec(f_str + "\n" + d["test"], namespace)
             f = namespace[d["entry_point"]]
