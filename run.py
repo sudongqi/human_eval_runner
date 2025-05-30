@@ -24,7 +24,7 @@ async def f(session, data, idx):
             "max_tokens": 512,
             "temperature": 0,
             "response_format": {"type": "json_object"},
-            "messages": build_messages(msg, {"prompt": data[idx]})}
+            "messages": build_messages(msg, {"prompt": data[idx]["prompt"]})}
     ) as resp:
         try:
             res = await resp.json()
