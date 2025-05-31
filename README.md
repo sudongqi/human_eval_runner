@@ -24,3 +24,4 @@ python run.py eval
 ### Benchmark
 
 - Qwen/Qwen2.5-Coder-0.5B-Instruct: 0.604
+- Qwen/Qwen2.5-Coder-1.5B-Instruct: 0.696
