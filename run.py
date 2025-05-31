@@ -47,20 +47,25 @@ async def infer():
     save_jsonl(this_dir("output.jsonl"), [{**d, "output": r} for d, r in zip(data, results)])
 
 
+semaphore = asyncio.Semaphore(16)
+
+
 async def validate(session, d):
-    async with session.post(
-        "http://localhost:8001/validate",
-        headers={"Content-Type": "application/json"},
-        json={"candidate": d["output"], "checker": d["test"], "entrypoint": d["entry_point"], "timeout": 3}
-    ) as response:
-        return await response.json()
+    async with semaphore:
+        async with session.post(
+            "http://localhost:8001/validate",
+            headers={"Content-Type": "application/json"},
+            json={"candidate": d["output"], "checker": d["test"], "entrypoint": d["entry_point"], "timeout": 5}
+        ) as response:
+            return await response.json()
 
 
 async def eval():
     async with aiohttp.ClientSession() as session:
-        tasks = [validate(session, d) for d in load_jsonl("output.jsonl")]
+        data = list(load_jsonl("output.jsonl"))
+        tasks = [validate(session, d) for d in data]
         results = await asyncio.gather(*tasks)
-        print(sum(int(r["res"]) for r in results))
+        print(f"Passrate: {sum(int(r["res"]) for r in results) / len(data):.3f}")
 
 
 if __name__ == "__main__":

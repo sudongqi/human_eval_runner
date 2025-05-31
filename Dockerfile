@@ -4,4 +4,4 @@ RUN pip install fastapi uvicorn
 COPY validator.py .
 
 EXPOSE 80
-ENTRYPOINT uvicorn validator:app --host 0.0.0.0 --port 80 --workers 8
+ENTRYPOINT uvicorn validator:app --host 0.0.0.0 --port 80

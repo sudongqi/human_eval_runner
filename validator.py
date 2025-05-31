@@ -13,7 +13,7 @@ class ValidateRequest(BaseModel):
     timeout: int
 
 
-executor = ThreadPoolExecutor(max_workers=1)
+executor = ThreadPoolExecutor(max_workers=8)
 
 
 def f(checker, candidate, entrypoint):
